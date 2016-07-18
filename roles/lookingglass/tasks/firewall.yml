@@ -1,0 +1,16 @@
+---
+- name: Install UFW firewall.
+  apt:
+    name: ufw
+    state: present
+
+- name: Allow HTTP and SSH only.
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+    state: enabled
+  with_items:
+    - 22
+    - 80
+  ignore_errors: yes

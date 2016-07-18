@@ -1,0 +1,78 @@
+---
+- name: Copy gemrc file to skip building documentation
+  copy:
+    dest: /root/.gemrc
+    src: gemrc
+    owner: root
+    group: root
+    mode: "0640"
+
+- name: Install necessary Ruby gems.
+  command: "gem install {{ item }}"
+  args:
+    chdir: /var/www/LookingGlass
+  with_items:
+    - bundler
+    - puma
+    - rails
+    - rake
+
+- name: Install the Ruby gem bundle.
+  command: "bundle install"
+  args:
+    chdir: /var/www/LookingGlass
+
+#- name: Generate simple form data.
+#  command: "bundle exec rails generate simple_form:install"
+#  args:
+#    chdir: /var/www/LookingGlass
+#  become_user: "{{ lg_user }}"
+
+- name: Copy Puma service.
+  template:
+    dest: "/etc/systemd/system/puma.service"
+    src: puma.service.j2
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload systemd
+
+- name: Update absolute path to the data.
+  lineinfile:
+    dest: /var/www/LookingGlass/app/dataspec/dataspec-snowden/dataset_details.json
+    regexp: "^  \"Path\":"
+    line: "  \"Path\": \"/home/{{ lg_user }}/data\","
+    state: present
+
+- name: Update the importer config.
+  lineinfile:
+    dest: /var/www/LookingGlass/app/dataspec/importer.json
+    regexp: "^      \"Instance Config\":"
+    line: "      \"Instance Config\":\"app/dataspec/instances/snowden_config.json\""
+    state: present
+
+- name: Import dataset.
+  command: "bundle exec rails runner 'IndexManager.import_data(force: true)'"
+  args:
+    chdir: /var/www/LookingGlass
+  become_user: "{{ lg_user }}"
+
+- name: Compile assets.
+  command: "bundle exec rake assets:precompile"
+  args:
+    chdir: /var/www/LookingGlass
+  become_user: "{{ lg_user }}"
+
+- name: Fix ownership of Gemfile.lock.
+  file:
+    path: /var/www/LookingGlass/Gemfile.lock
+    owner: "{{ lg_user }}"
+    group: "{{ lg_user }}"
+    state: touch
+
+- name: Start the server.
+  service:
+    name: puma
+    state: started
+    enabled: yes
+  when: inventory_hostname != 'localhost'

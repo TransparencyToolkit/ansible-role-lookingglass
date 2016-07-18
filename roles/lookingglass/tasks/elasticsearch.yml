@@ -1,0 +1,90 @@
+---
+- name: Install Java JRE.
+  apt:
+    name: default-jre-headless
+    state: present
+
+- name: Add Elastic repositories apt key.
+  apt_key:
+    url: https://packages.elastic.co/GPG-KEY-elasticsearch
+    state: present
+
+- name: Add ElasticSearch apt repo.
+  apt_repository:
+    repo: "deb http://packages.elastic.co/elasticsearch/1.5/debian stable main"
+    state: present
+  notify: reload systemd
+
+- name: Install ElasticSearch.
+  apt:
+    name: elasticsearch
+    state: latest
+  notify:
+    - reload systemd
+    - restart elasticsearch
+
+- name: Configure ElasticSearch.
+  template:
+    dest: /etc/elasticsearch/elasticsearch.yml
+    src: elasticsearch.yml.j2
+  notify: restart elasticsearch
+
+- name: Configure ElasticSearch (continued).
+  copy:
+    dest: /etc/default/elasticsearch
+    src: elasticsearch
+  notify: restart elasticsearch
+
+- name: Set fact for ElasticSearch heap size.
+  set_fact:
+    elasticsearch_heap_size: >-
+      {{ ((ansible_memtotal_mb / 2) | int) if ansible_memtotal_mb < 65536
+      else 31744 }}
+
+- name: Configure ElasticSearch heap size.
+  lineinfile:
+    dest: /etc/default/elasticsearch
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  with_items:
+    - regexp: "^ES_HEAP_SIZE"
+      line: "ES_HEAP_SIZE={{ elasticsearch_heap_size }}m"
+  notify: restart elasticsearch
+
+- name: Raises memlock limits for ElasticSearch in systemd config.
+  lineinfile:
+    dest: /usr/lib/systemd/system/elasticsearch.service
+    regexp: "^#?LimitMEMLOCK="
+    line: "LimitMEMLOCK=infinity"
+    state: present
+  notify:
+    - reload systemd
+    - restart elasticsearch
+
+- name: Set PAM limits for ElasticSearch user.
+  pam_limits:
+    domain: "{{ item.domain }}"
+    limit_item: "{{ item.limit_item }}"
+    limit_type: "{{ item.limit_type }}"
+    value: "{{ item.value }}"
+    backup: yes
+  with_items: "{{ elasticsearch_pam_limits }}"
+  
+- name: Symlink configuration folder.
+  file:
+    src: /etc/elasticsearch
+    dest: /usr/share/elasticsearch/config
+    state: link
+
+- name: Start ElasticSearch service.
+  service:
+    name: elasticsearch
+    state: running
+    enabled: yes
+  register: elasticsearch_service_start_result
+
+- name: Wait for ElasticSearch service to start.
+  pause:
+    seconds: 10
+  when: elasticsearch_service_start_result.changed

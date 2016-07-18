@@ -1,0 +1,15 @@
+---
+- include: elasticsearch.yml
+  tags: es
+
+- include: application.yml
+  tags: app
+
+- include: ruby.yml
+  tags: env
+
+- include: perms.yml
+  tags: perms
+
+- include: firewall.yml
+  tags: ufw

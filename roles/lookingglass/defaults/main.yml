@@ -1,0 +1,28 @@
+---
+nginx_server_name: 'localhost'
+lg_user: 'lg'
+
+lg_dataspec: 'https://github.com/TransparencyToolkit/dataspec-snowden'
+lg_data: 'https://github.com/transparencytoolkit/nsa-data'
+
+elasticsearch_cluster_name: transparencytoolkit
+elasticsearch_pam_limits:
+  - domain: elasticsearch
+    limit_item: memlock
+    limit_type: hard
+    value: unlimited
+
+  - domain: elasticsearch
+    limit_item: memlock
+    limit_type: soft
+    value: unlimited
+
+  - domain: elasticsearch
+    limit_item: nofile
+    limit_type: soft
+    value: 65535
+
+  - domain: elasticsearch
+    limit_item: nofile
+    limit_type: hard
+    value: 65535

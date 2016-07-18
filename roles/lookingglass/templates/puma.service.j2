@@ -1,0 +1,13 @@
+[Unit]
+Description=Puma HTTP Server
+After=network.target
+
+[Service]
+Type=simple
+User={{ lg_user }}
+WorkingDirectory=/var/www/LookingGlass
+ExecStart=/bin/bash -a -c 'source /etc/profile.d/rvm.sh && bundle exec puma'
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

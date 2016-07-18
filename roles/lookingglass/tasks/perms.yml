@@ -1,0 +1,6 @@
+---
+- name: Adjust permissions for directories.
+  command: "find /var/www/LookingGlass -mindepth 1 -type d -exec chmod 750 {} +"
+
+- name: Adjust permissions for files.
+  command: "find /var/www/LookingGlass -type f -exec chmod 640 {} +"

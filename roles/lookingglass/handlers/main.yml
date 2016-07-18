@@ -1,0 +1,19 @@
+---
+- name: restart nginx
+  service:
+    name: nginx
+    state: restarted
+    enabled: yes
+
+- name: reload systemd
+  command: /bin/systemctl daemon-reload
+
+- name: restart nginx
+  service:
+    name: nginx
+    state: restarted
+
+- name: restart elasticsearch
+  service:
+    name: elasticsearch
+    state: restarted

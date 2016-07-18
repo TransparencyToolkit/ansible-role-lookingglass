@@ -1,0 +1,52 @@
+user www-data;
+worker_processes 4;
+pid /var/run/nginx.pid;
+
+events {
+  worker_connections 768;
+}
+
+http {
+  sendfile on;
+  tcp_nopush on;
+  tcp_nodelay on;
+  keepalive_timeout 65;
+  types_hash_max_size 2048;
+
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
+
+  access_log /var/log/nginx/access.log;
+  error_log /var/log/nginx/error.log;
+
+  gzip on;
+  gzip_disable "msie6";
+
+  proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=STATIC:10m inactive=24h max_size=1g;
+  server {
+    listen 80;
+    server_name {{ nginx_server_name }};
+
+    # various HTTP security headers
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-Download-Options: noopen;
+    add_header X-Permitted-Cross-Domain-Policies master-only;
+
+    # don't leak info about software version in headers
+    server_tokens off;
+
+    # default is 1MB, set to unlimited
+    client_max_body_size 0;
+
+    # reverse proxy to Puma
+    location / {
+      proxy_set_header Host $host;
+      proxy_pass http://127.0.0.1:9292/;
+      proxy_cache STATIC;
+      proxy_cache_valid 200 1d;
+      proxy_cache_use_stale error timeout invalid_header updating http_500 http_502 http_503 http_504;
+    }
+
+  }
+}

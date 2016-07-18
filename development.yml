@@ -1,0 +1,24 @@
+---
+- name: Apply the Looking Glass role.
+  become: yes
+  hosts:
+    - default
+    - localhost
+  pre_tasks:
+    - name: Install some tools.
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      with_items:
+        - curl
+        - screen
+        - tmux
+        - vim
+  roles:
+    - role: rvm
+      tags: rvm
+      rvm1_rubies:
+        - 'ruby-2.3.0'
+    - role: lookingglass
+      tags: lg

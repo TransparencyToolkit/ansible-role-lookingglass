@@ -1,0 +1,6 @@
+---
+- src: https://github.com/rvm/rvm1-ansible
+  name: rvm
+
+- src: https://github.com/chrismeyersfsu/provision_docker
+  name: docker

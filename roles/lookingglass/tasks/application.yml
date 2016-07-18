@@ -1,0 +1,86 @@
+---
+- name: Install dependencies.
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items:
+    - git-core
+    - nginx
+    - python-passlib
+
+- name: Set up the application user.
+  user:
+    name: "{{ lg_user }}"
+    shell: /bin/bash
+    state: present
+
+- name: Ensure presence of the document root.
+  file:
+    path: "/var/www"
+    state: directory
+    owner: "{{ lg_user }}"
+    group: www-data
+    mode: "0750"
+
+- name: Clone git repo for LookingGlass.
+  git:
+    repo: https://github.com/TransparencyToolkit/LookingGlass
+    dest: /var/www/LookingGlass
+    version: master
+    force: yes
+    depth: 1
+  ignore_errors: yes
+
+- name: Initialize git submodules.
+  command: "git submodule update --init"
+  args:
+    chdir: /var/www/LookingGlass
+  ignore_errors: yes
+
+- name: Clone the dataspec for LookingGlass.
+  git:
+    repo: "{{ lg_dataspec }}"
+    dest: /var/www/LookingGlass/app/dataspec/dataspec-snowden
+    version: master
+    force: yes
+    depth: 1
+
+- name: Clone the data for LookingGlass.
+  git:
+    repo: "{{ lg_data }}"
+    dest: "/home/{{ lg_user }}/data"
+    version: master
+    force: yes
+    depth: 1
+
+- name: Remove empty month-names dir.
+  file:
+    path: /var/www/LookingGlass/data-packages/month-names
+    state: absent
+
+- name: Clone the month-names.
+  git:
+    repo: https://github.com/transparencytoolkit/month-names
+    dest: /var/www/LookingGlass/data-packages/month-names
+    version: master
+    force: yes
+    depth: 1
+
+- name: Adjust ownership of application code.
+  command: "chown -R {{ lg_user }}:{{ lg_user }} /var/www/LookingGlass"
+
+- name: Copy nginx configuration.
+  template:
+    dest: "/etc/nginx/nginx.conf"
+    src: nginx.conf.j2
+    owner: root
+    group: root
+    mode: "0640"
+  notify: restart nginx
+
+- name: Deactivate default nginx site.
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: restart nginx
