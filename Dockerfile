@@ -11,9 +11,8 @@ run pip install -U ansible
 run useradd -ms /bin/bash lg
 workdir /home/lg
 
-run git clone https://github.com/TransparencyToolkit/ansible-role-lookingglass
+add . /home/lg/ansible-role-lookingglass
 workdir /home/lg/ansible-role-lookingglass
-run git pull
 run ansible-playbook --connection=local --limit localhost development.yml; exit 0
 
 add run.sh /home/lg/run.sh
